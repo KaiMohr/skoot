@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.Intent;
+import android.media.AudioAttributes;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -18,6 +19,9 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 
+import android.media.AudioManager;
+import android.media.SoundPool;
+
 import maisi.M365.power.util.BleUtil;
 import maisi.M365.power.util.ScannedDevice;
 import permissions.dispatcher.NeedsPermission;
@@ -28,6 +32,7 @@ public class ScanActivity extends Activity implements BluetoothAdapter.LeScanCal
     private BluetoothAdapter mBTAdapter;
     private DeviceAdapter mDeviceAdapter;
     private boolean mIsScanning;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -151,6 +156,8 @@ public class ScanActivity extends Activity implements BluetoothAdapter.LeScanCal
     }
 
     private void stopScan() {
+
+
         if (mBTAdapter != null) {
             mBTAdapter.stopLeScan(this);
         }

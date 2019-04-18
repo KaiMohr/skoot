@@ -43,6 +43,7 @@ public class AmpereRequest implements IRequest {
         double c = amps;
         c = c / 100;
         Statistics.setCurrentAmpere(c);
+
         return "" + c + " A";
     }
 

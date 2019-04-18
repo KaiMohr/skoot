@@ -2,8 +2,11 @@ package maisi.M365.power.main;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
+import android.media.ToneGenerator;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -29,7 +32,6 @@ import com.polidea.rxandroidble2.RxBleDevice;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
@@ -65,6 +67,10 @@ import maisi.M365.power.main.Requests.SwitchRequests.Recovery.WeakMode;
 import maisi.M365.power.main.Requests.VoltageRequest;
 import maisi.M365.power.util.HexString;
 import maisi.M365.power.util.LogWriter;
+
+import android.media.AudioManager;
+import android.media.SoundPool;
+
 
 public class DeviceActivity extends AppCompatActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback {
@@ -118,7 +124,18 @@ public class DeviceActivity extends AppCompatActivity
     private boolean runOnce = false;
     private static final int PERMISSION_EXTERNAL_STORAGE = 0;
     private ConstraintLayout mRootView;
-
+// Audio
+    public SoundPool soundPool;
+    private AudioManager audioManager;
+    // Maximumn sound stream.
+    private static final int MAX_STREAMS = 5;
+    // Stream type.
+    private static final int streamType = AudioManager.STREAM_MUSIC;
+    private boolean loaded;
+    private int soundIdB3;
+    private int soundIdBeep;
+    public int soundIdSwitchOn;
+    public float volume;
 
     private Runnable updateSuperRunnable = new Runnable() {
         @Override
@@ -195,6 +212,7 @@ public class DeviceActivity extends AppCompatActivity
     private Menu menu;
 
 
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -204,6 +222,53 @@ public class DeviceActivity extends AppCompatActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+        // AudioManager audio settings for adjusting the volume
+        audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+
+        // Current vol Index of particular stream type.
+        float currentVolumeIndex = (float) audioManager.getStreamVolume(streamType);
+
+        // Get the maximum volume index for a particular stream type.
+        float maxVolumeIndex  = (float) audioManager.getStreamMaxVolume(streamType);
+
+        // Vol (0 --> 1)
+        this.volume = currentVolumeIndex / maxVolumeIndex;
+
+        // Suggests an audio stream whose volume should be changed by
+        // the hardware volume controls.
+        this.setVolumeControlStream(streamType);
+
+
+
+        AudioAttributes audioAttrib = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+
+        SoundPool.Builder builder= new SoundPool.Builder();
+        builder.setAudioAttributes(audioAttrib).setMaxStreams(MAX_STREAMS);
+
+        this.soundPool = builder.build();
+
+
+
+        // When Sound Pool load complete.
+        this.soundPool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
+            @Override
+            public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
+                loaded = true;
+            }
+        });
+
+        // Load sound file (second) into SoundPool.
+        this.soundIdB3 = this.soundPool.load(this, R.raw.b3,1);
+
+        // Load sound file (gun.wav) into SoundPool.
+        this.soundIdBeep = this.soundPool.load(this, R.raw.beep,1);
+
+
+
         setTheme(R.style.MyAppTheme);
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
@@ -296,6 +361,8 @@ public class DeviceActivity extends AppCompatActivity
         else{
             storagePermission=true;
         }
+
+
     }
 
     private void fillCheckFirstList() {
@@ -452,6 +519,7 @@ public class DeviceActivity extends AppCompatActivity
         Thread t = new Thread() {
             public void run() {
                 runOnUiThread(() -> {
+
                     powerMeter.setText((int) Statistics.getPower() + "W");
                     DecimalFormat df = new DecimalFormat("#.####");
                     df.setRoundingMode(RoundingMode.CEILING);
@@ -475,6 +543,65 @@ public class DeviceActivity extends AppCompatActivity
                     distance.setText(df1.format(Statistics.getDistanceTravelled())+ " km");
                     averageEfficiency.setText(df1.format(Statistics.getAverageEfficiency())+ " mAh/km");
                     averageSpeed.setText(df1.format(Statistics.getAverageSpeed())+ " km/h");
+
+                    Double power = Statistics.getPower();
+
+                    Context context = getApplicationContext();
+
+
+                    if (power <= 0.8)  {
+                        /*
+                            int tone = 0;
+                            int duration = 1000;
+                            String name = "beep";
+                            if (name.equals("beep")) {
+                                tone = ToneGenerator.TONE_PROP_BEEP;
+                            } else if (name.equals("beep_beep_beep")) {
+                                tone = ToneGenerator.TONE_CDMA_CONFIRM;
+                            } else if (name.equals("long_beep")) {
+                                tone = ToneGenerator.TONE_CDMA_ABBR_ALERT;
+                            } else if (name.equals("doodly_doo")) {
+                                tone = ToneGenerator.TONE_CDMA_ALERT_NETWORK_LITE;
+                            } else if (name.equals("chirp_chirp_chirp")) {
+                                tone = ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD;
+                            } else if (name.equals("dialtone")) {
+                                tone = ToneGenerator.TONE_SUP_RINGTONE;
+                            }
+                            toneGenerator.startTone(tone, duration);
+*/
+
+                            float leftVolumn = volume;
+                            float rightVolumn = volume;
+                            // Play sound of gunfire. Returns the ID of the new stream.
+                            int streamId = soundPool.play(soundIdBeep,leftVolumn, rightVolumn, 1, 0, 1f);
+soundPool.setLoop(streamId, 2);
+
+                    }
+                    else if (power >= 1.5) {
+                        float leftVolumn = volume;
+                        float rightVolumn = volume;
+
+                        int streamId = soundPool.play(soundIdB3,leftVolumn, rightVolumn, 1, 0, 1f);
+
+                    }
+
+                    else {
+
+                    }
+
+
+
+                 /*
+                 Context context = getApplicationContext();
+                    String text = "ur speed" + Statistics.getPower();
+
+                    int duration = Toast.LENGTH_SHORT;
+
+                    Toast toast = Toast.makeText(context, text, duration);
+                    toast.show();
+                    */
+
+
                 });
             }
         };
@@ -509,6 +636,8 @@ public class DeviceActivity extends AppCompatActivity
             }
             startHandlerButton.setText("Stop Handler");
             handlerStarted=true;
+
+            Toast.makeText(this, "kai started the handler", Toast.LENGTH_SHORT).show();
         }
         else{
             stopHandler();

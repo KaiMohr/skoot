@@ -1,5 +1,8 @@
 package maisi.M365.power.main.Requests;
 
+import android.media.AudioManager;
+import android.media.SoundPool;
+
 import java.util.concurrent.TimeUnit;
 
 import maisi.M365.power.main.IRequest;
@@ -48,6 +51,8 @@ public class SpeedRequest implements IRequest {
         //Log.d("Speed","speed:"+v);
         Statistics.setSpeed(v);
         v = Statistics.round(v, 1);
+
+
         return v + "";
         //return textViews;
     }
