@@ -574,7 +574,7 @@ public class DeviceActivity extends AppCompatActivity
                             float rightVolumn = volume;
                             // Play sound of gunfire. Returns the ID of the new stream.
                             int streamId = soundPool.play(soundIdBeep,leftVolumn, rightVolumn, 1, 0, 1f);
-soundPool.setLoop(streamId, 2);
+ soundPool.setLoop(streamId, 2);
 
                     }
                     else if (power >= 1.5) {
