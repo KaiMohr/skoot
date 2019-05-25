@@ -21,10 +21,16 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.support.design.widget.Snackbar;
 
+import com.github.anastr.speedviewlib.Gauge;
+import com.github.anastr.speedviewlib.ProgressiveGauge;
+import com.github.anastr.speedviewlib.SpeedView;
+import com.github.anastr.speedviewlib.util.OnSpeedChangeListener;
 import com.polidea.rxandroidble2.RxBleClient;
 import com.polidea.rxandroidble2.RxBleConnection;
 import com.polidea.rxandroidble2.RxBleDevice;
@@ -71,9 +77,21 @@ import maisi.M365.power.util.LogWriter;
 import android.media.AudioManager;
 import android.media.SoundPool;
 
+import com.github.anastr.speedviewlib.AwesomeSpeedometer;
+import com.github.anastr.speedviewlib.DeluxeSpeedView;
+import com.github.anastr.speedviewlib.ImageSpeedometer;
+import com.github.anastr.speedviewlib.PointerSpeedometer;
+import com.github.anastr.speedviewlib.RaySpeedometer;
+import com.github.anastr.speedviewlib.SpeedView;
+import com.github.anastr.speedviewlib.Speedometer;
+import com.github.anastr.speedviewlib.TubeSpeedometer;
+import com.github.anastr.speedviewlib.components.Indicators.Indicator;
+
+
 
 public class DeviceActivity extends AppCompatActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback {
+
 
     public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
     public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
@@ -132,10 +150,17 @@ public class DeviceActivity extends AppCompatActivity
     // Stream type.
     private static final int streamType = AudioManager.STREAM_MUSIC;
     private boolean loaded;
+    private int soundIdB1;
+    private int soundIdB2;
     private int soundIdB3;
+    private int soundIdB4;
+    private int soundIdB5;
+    private int soundIdB6;
     private int soundIdBeep;
     public int soundIdSwitchOn;
     public float volume;
+
+
 
     private Runnable updateSuperRunnable = new Runnable() {
         @Override
@@ -223,6 +248,9 @@ public class DeviceActivity extends AppCompatActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
+
+
+
         // AudioManager audio settings for adjusting the volume
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
 
@@ -261,10 +289,13 @@ public class DeviceActivity extends AppCompatActivity
             }
         });
 
-        // Load sound file (second) into SoundPool.
+        // Load sound file into SoundPool.
+        this.soundIdB1 = this.soundPool.load(this, R.raw.b1,1);
+        this.soundIdB2 = this.soundPool.load(this, R.raw.b2,1);
         this.soundIdB3 = this.soundPool.load(this, R.raw.b3,1);
-
-        // Load sound file (gun.wav) into SoundPool.
+        this.soundIdB4 = this.soundPool.load(this, R.raw.b4,1);
+        this.soundIdB5 = this.soundPool.load(this, R.raw.b5,1);
+        this.soundIdB6 = this.soundPool.load(this, R.raw.b6,1);
         this.soundIdBeep = this.soundPool.load(this, R.raw.beep,1);
 
 
@@ -319,7 +350,6 @@ public class DeviceActivity extends AppCompatActivity
         life = this.findViewById(R.id.life);
         life.setType(RequestType.BATTERYLIFE);
         textViews.add(life);
-
 
         final Intent intent = getIntent();
         mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
@@ -389,6 +419,8 @@ public class DeviceActivity extends AppCompatActivity
     }
 
     private void updateUI(byte[] bytes) {
+
+
         if (bytes.length == 0) { //super request returns a third empty message
             return;
         }
@@ -515,6 +547,8 @@ public class DeviceActivity extends AppCompatActivity
 
         }
 
+
+
         //update on each response
         Thread t = new Thread() {
             public void run() {
@@ -544,46 +578,90 @@ public class DeviceActivity extends AppCompatActivity
                     averageEfficiency.setText(df1.format(Statistics.getAverageEfficiency())+ " mAh/km");
                     averageSpeed.setText(df1.format(Statistics.getAverageSpeed())+ " km/h");
 
+
+                    Double speed = Statistics.getCurrentSpeed();
+                    double s = speed;
+                    float currentSpeed =(float)s;
+
                     Double power = Statistics.getPower();
+                    double p = power;
+                    float currentPower = (float)p;
 
                     Context context = getApplicationContext();
 
+                    SpeedView speedometer = findViewById(R.id.speedView);
+                    // speedometer.setMinMaxSpeed(0,650);
+                    speedometer.setUnitTextSize(20);
+                    speedometer.speedTo(currentSpeed);
 
-                    if (power <= 0.8)  {
-                        /*
-                            int tone = 0;
-                            int duration = 1000;
-                            String name = "beep";
-                            if (name.equals("beep")) {
-                                tone = ToneGenerator.TONE_PROP_BEEP;
-                            } else if (name.equals("beep_beep_beep")) {
-                                tone = ToneGenerator.TONE_CDMA_CONFIRM;
-                            } else if (name.equals("long_beep")) {
-                                tone = ToneGenerator.TONE_CDMA_ABBR_ALERT;
-                            } else if (name.equals("doodly_doo")) {
-                                tone = ToneGenerator.TONE_CDMA_ALERT_NETWORK_LITE;
-                            } else if (name.equals("chirp_chirp_chirp")) {
-                                tone = ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD;
-                            } else if (name.equals("dialtone")) {
-                                tone = ToneGenerator.TONE_SUP_RINGTONE;
-                            }
-                            toneGenerator.startTone(tone, duration);
-*/
+                    SpeedView powerMeter = findViewById(R.id.powerView);
+                    powerMeter.speedTo(currentPower);
+                    powerMeter.setUnitTextSize(20);
 
+                    if (power >= 0.2 && power <= 1.5)  {
                             float leftVolumn = volume;
                             float rightVolumn = volume;
                             // Play sound of gunfire. Returns the ID of the new stream.
                             int streamId = soundPool.play(soundIdBeep,leftVolumn, rightVolumn, 1, 0, 1f);
- soundPool.setLoop(streamId, 2);
+
+
+                        powerMeter.speedTo(currentPower);
 
                     }
-                    else if (power >= 1.5) {
+
+                    else if (power >= 1.5 && power <= 20) {
                         float leftVolumn = volume;
                         float rightVolumn = volume;
 
-                        int streamId = soundPool.play(soundIdB3,leftVolumn, rightVolumn, 1, 0, 1f);
+                      //  int streamId = soundPool.play(soundIdB1,leftVolumn, rightVolumn, 1, 0, 1f);
+
+
+                        powerMeter.speedTo(currentPower);
+                    }
+                    else if (power >= 20 && power <= 200) {
+                        float leftVolumn = volume;
+                        float rightVolumn = volume;
+
+                    //    int streamId = soundPool.play(soundIdB2,leftVolumn, rightVolumn, 1, 0, 1f);
+
+                        powerMeter.speedTo(currentPower);
+                    }
+
+                    else if (power >= 200 && power <= 300) {
+                        float leftVolumn = volume;
+                        float rightVolumn = volume;
+
+                    //    int streamId = soundPool.play(soundIdB3,leftVolumn, rightVolumn, 1, 0, 1f);
+
+                        powerMeter.speedTo(currentPower);
+                    }
+
+                    else if (power >= 300 && power <= 400) {
+                        float leftVolumn = volume;
+                        float rightVolumn = volume;
+
+                    //    int streamId = soundPool.play(soundIdB4,leftVolumn, rightVolumn, 1, 0, 1f);
+
+
 
                     }
+                    else if (power >= 400 && power <= 500) {
+                        float leftVolumn = volume;
+                        float rightVolumn = volume;
+
+                    //    int streamId = soundPool.play(soundIdB5,leftVolumn, rightVolumn, 1, 0, 1f);
+
+
+                    }
+                    else if (power >= 500 && power <= 600) {
+                        float leftVolumn = volume;
+                        float rightVolumn = volume;
+
+                        int streamId = soundPool.play(soundIdB1,leftVolumn, rightVolumn, 1, 0, 1f);
+
+                   // powermeter.setSpeedometerColor(1000);
+                    }
+
 
                     else {
 
